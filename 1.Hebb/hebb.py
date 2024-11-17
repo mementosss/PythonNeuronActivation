@@ -1,76 +1,82 @@
 import numpy as np
 
 
-# Функция активации (бинарная функция)
-def activation(x):
-    return 1 if x >= 0 else -1
+class HebbNeuron:
+    def __init__(self, input_dim):
+        """
+        Инициализация нейрона:
+        - Весовые коэффициенты (weights) случайны, близки к нулю.
+        - Смещение (bias) равно нулю.
+        """
+        self.weights = np.random.uniform(-0.1, 0.1, input_dim)  # Малые случайные веса
+        self.bias = 0  # Порог инициализируется нулем
+
+    def activation(self, x):
+        """
+        Функция активации:
+        Возвращает -1 или 1 на основе знака входного значения.
+        """
+        return 1 if x > 0 else -1
+
+    def predict(self, inputs):
+        """
+        Предсказание выхода сети:
+        - Скалярное произведение весов и входа + смещение.
+        """
+        net_input = np.dot(inputs, self.weights) - self.bias
+        return self.activation(net_input)
+
+    def train(self, X, Y, epochs=1):
+        """
+        Обучение по правилу Хебба:
+        - Обновляет веса и смещение, если предсказание не совпадает с эталоном.
+        """
+        for epoch in range(epochs):
+            print(f"Эпоха {epoch + 1}:")
+            for i in range(len(X)):
+                x, y_true = X[i], Y[i]
+                y_pred = self.predict(x)
+                print(f"  Вход: {x}, Ожидаемый: {y_true}, Предсказанный: {y_pred}")
+
+                if y_pred != y_true:
+                    # Обновление весов и смещения по правилу Хебба
+                    self.weights += x * y_true
+                    self.bias -= y_true
+                    print(f"    Обновление весов: {self.weights}, Смещение: {self.bias}")
+            print()
+
+    def evaluate(self, X):
+        """
+        Оценивает входы после обучения.
+        """
+        results = []
+        for x in X:
+            results.append(self.predict(x))
+        return results
 
 
-def hebbian_learning(inputs, outputs, epochs=10, initial_bias=0.1, learning_rate=0.01):
-    # Инициализация весов и порога случайными значениями, близкими к нулю
-    weights = np.random.uniform(-0.1, 0.1, inputs.shape[1])  # 3 веса для 3 переменных (x1, x2, смещение)
-    bias = initial_bias  # Используем значение смещения, переданное в функцию
-
-    print(f"Начальные веса: {weights}, начальный порог: {bias}")
-
-    # Обучение
-    for epoch in range(epochs):
-        total_error = 0  # Счетчик ошибок на эпохе
-        print(f"\nЭпоха {epoch + 1}:")
-
-        for x, target in zip(inputs, outputs):
-            # Сумма взвешенных входов
-            net_input = np.dot(x, weights) + bias  # Включаем смещение в вычисления
-            # Применяем активационную функцию
-            y_pred = activation(net_input)
-
-            # Ошибка
-            error = target - y_pred
-            total_error += abs(error)
-
-            if error != 0:  # Если ошибка есть, обновляем веса и порог
-                weights += learning_rate * error * x  # Обновление весов с коэффициентом обучения
-                bias += -learning_rate * error  # Обновление порога (по правилу Хебба)
-
-            # Выводим информацию о текущем шаге
-            print(f"  Вход: {x}, Прогноз: {y_pred}, Ошибка: {error}, Обновленные веса: {weights}, Обновленный порог: {bias}")
-
-        # Выводим ошибки на каждой эпохе
-        print(f"  Ошибки на эпохе {epoch + 1}: {total_error}")
-
-        # Если ошибка равна 0, завершить обучение
-        if total_error == 0:
-            print(f"\nОбучение завершено на эпохе {epoch + 1}.")
-            break
-
-    return weights, bias
-
-# Основная программа
+# Пример использования алгоритма Хебба
 if __name__ == "__main__":
-    # Параметры для настройки
-    learning_rate = 0.01  # Коэффициент обучения
-    initial_bias = 0.9    # Начальный порог
-
-    # Входные данные для OR (с учетом смещения)
-    inputs = np.array([
-        [-1, -1, 1],  # x1 = -1, x2 = -1, смещение = 1
-        [-1,  1, 1],  # x1 = -1, x2 =  1, смещение = 1
-        [ 1, -1, 1],  # x1 =  1, x2 = -1, смещение = 1
-        [ 1,  1, 1]   # x1 =  1, x2 =  1, смещение = 1
+    # Обучающая выборка: входы и эталонные выходы
+    X = np.array([
+        [-1, -1],  # Вектор 1
+        [-1, 1],  # Вектор 2
+        [1, -1],  # Вектор 3
+        [1, 1],  # Вектор 4
     ])
+    Y = np.array([-1, -1, -1, 1])  # Эталонные выходы
 
-    # Ожидаемые выходные значения для OR
-    outputs = np.array([-1, 1, 1, 1])  # OR: -1, 1, 1, 1
+    # Инициализация нейрона
+    neuron = HebbNeuron(input_dim=2)
+
+    # Вывод начальных весов
+    print(f"Начальные веса: {neuron.weights}, Смещение: {neuron.bias}\n")
 
     # Обучение
-    weights, bias = hebbian_learning(inputs, outputs, epochs=100, initial_bias=initial_bias, learning_rate=learning_rate)
+    neuron.train(X, Y, epochs=2)
 
-    print(f"\nОбученные веса: {weights}")
-    print(f"Обученный порог: {bias}")
-
-    # Проверим результат
-    print("\nПроверка обучения:")
-    for x, target in zip(inputs, outputs):
-        net_input = np.dot(x, weights) + bias
-        y_pred = activation(net_input)
-        print(f"Вход: {x}, Прогноз: {y_pred}, Ожидаемый результат: {target}")
+    # Проверка сети
+    outputs = neuron.evaluate(X)
+    print("Результаты после обучения:")
+    for i, x in enumerate(X):
+        print(f"  Вход: {x}, Выход: {outputs[i]}")
